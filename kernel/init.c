@@ -687,14 +687,14 @@ static char *prepare_multithreading(void)
 				       NULL, NULL, NULL,
 				       CONFIG_MAIN_THREAD_PRIORITY,
 				       K_ESSENTIAL, "main");
-	early_puts("z_setup_new_thread -- A\n");
+	early_puts("prepare_multithreading -- A\n");
 	z_mark_thread_as_started(&z_main_thread);
-	early_puts("z_setup_new_thread -- B\n");
+	early_puts("prepare_multithreading -- B\n");
 	z_ready_thread(&z_main_thread);
-	early_puts("z_setup_new_thread -- C\n");
+	early_puts("prepare_multithreading -- C\n");
 
 	z_init_cpu(0);
-	early_puts("z_setup_new_thread -- D\n");
+	early_puts("prepare_multithreading -- D\n");
 
 	return stack_ptr;
 }
@@ -785,10 +785,7 @@ FUNC_NORETURN void z_cstart(void)
 #endif /* CONFIG_MULTITHREADING */
 	early_puts("z_cstart -> F\n");
 	/* do any necessary initialization of static devices */
-#ifdef CONFIG_BENCHMARKING
-#else
 	z_device_state_init();
-#endif
 
 	early_puts("z_cstart -> G\n");
 	/* perform basic hardware initialization */
@@ -797,10 +794,7 @@ FUNC_NORETURN void z_cstart(void)
 	arch_smp_init();
 #endif
 	early_puts("z_cstart -> H\n");
-#ifdef CONFIG_BENCHMARKING
-#else
 	z_sys_init_run_level(INIT_LEVEL_PRE_KERNEL_2);
-#endif
 	early_puts("z_cstart -> I\n");
 
 #ifdef CONFIG_STACK_CANARIES

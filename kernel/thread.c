@@ -533,7 +533,7 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 #ifdef CONFIG_THREAD_ABORT_NEED_CLEANUP
 	k_thread_abort_cleanup_check_reuse(new_thread);
 #endif /* CONFIG_THREAD_ABORT_NEED_CLEANUP */
-	early_puts("z_setup_new_thread -- B\n");
+	early_puts("z_setup_new_thread -- C\n");
 
 #ifdef CONFIG_OBJ_CORE_THREAD
 	k_obj_core_init_and_link(K_OBJ_CORE(new_thread), &obj_type_thread);
@@ -543,18 +543,26 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 				  sizeof(new_thread->base.usage));
 #endif /* CONFIG_OBJ_CORE_STATS_THREAD */
 #endif /* CONFIG_OBJ_CORE_THREAD */
+	early_puts("z_setup_new_thread -- D\n");
 
 #ifdef CONFIG_USERSPACE
+	early_puts("z_setup_new_thread -- E\n");
 	__ASSERT((options & K_USER) == 0U || z_stack_is_user_capable(stack),
 		 "user thread %p with kernel-only stack %p",
 		 new_thread, stack);
+	early_puts("z_setup_new_thread -- F\n");
 	k_object_init(new_thread);
+	early_puts("z_setup_new_thread -- G\n");
 	k_object_init(stack);
+	early_puts("z_setup_new_thread -- H\n");
 	new_thread->stack_obj = stack;
+	early_puts("z_setup_new_thread -- I\n");
 	new_thread->syscall_frame = NULL;
+	early_puts("z_setup_new_thread -- J\n");
 
 	/* Any given thread has access to itself */
 	k_object_access_grant(new_thread, new_thread);
+	early_puts("z_setup_new_thread -- K\n");
 #endif /* CONFIG_USERSPACE */
 	z_waitq_init(&new_thread->join_queue);
 

@@ -784,8 +784,8 @@ struct arm_mmu_flat_range {
 
 #ifdef CONFIG_BENCHMARKING
 /*#define MEM_TYPE MT_RW | MT_RW_AP_ELx | MT_SECURE | MT_P_EXECUTE | MT_U_EXECUTE | MT_NO_OVERWRITE | MT_NG*/
-#define MEM_TYPE MT_DEVICE_nGnRnE
 /*#define MEM_TYPE MT_NORMAL*/
+#define MEM_TYPE MT_DEVICE_nGnRnE
 #else
 #define MEM_TYPE MT_NORMAL
 #endif

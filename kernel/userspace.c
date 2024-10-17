@@ -485,10 +485,13 @@ void k_object_free(void *obj)
 
 struct k_object *k_object_find(const void *obj)
 {
+	early_puts("k_object_find --A\n");
 	struct k_object *ret;
 
+	early_puts("k_object_find --B\n");
 	ret = z_object_gperf_find(obj);
 
+	early_puts("k_object_find --C\n");
 	if (ret == NULL) {
 		struct dyn_obj *dyn;
 
@@ -496,12 +499,16 @@ struct k_object *k_object_find(const void *obj)
 		 * 11.8 but is justified since we know dynamic objects
 		 * were not declared with a const qualifier.
 		 */
+		early_puts("k_object_find --D\n");
 		dyn = dyn_object_find(obj);
+		early_puts("k_object_find --E\n");
 		if (dyn != NULL) {
+			early_puts("k_object_find --F\n");
 			ret = &dyn->kobj;
 		}
 	}
 
+	early_puts("k_object_find --G\n");
 	return ret;
 }
 
@@ -774,14 +781,18 @@ void k_object_init(const void *obj)
 	 * finalizes it
 	 */
 
+	early_puts("k_object_init -- A\n");
 	ko = k_object_find(obj);
+	early_puts("k_object_init -- B\n");
 	if (ko == NULL) {
+		early_puts("k_object_init -- C\n");
 		/* Supervisor threads can ignore rules about kernel objects
 		 * and may declare them on stacks, etc. Such objects will never
 		 * be usable from userspace, but we shouldn't explode.
 		 */
 		return;
 	}
+	early_puts("k_object_init -- D\n");
 
 	/* Allows non-initialization system calls to be made on this object */
 	ko->flags |= K_OBJ_FLAG_INITIALIZED;
