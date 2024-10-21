@@ -116,6 +116,11 @@ int main(void)
 #else
 	printf("y\n");
 #endif
+#ifdef CONFIG_SCTLR_BENCHMARKING
+	printf("y\n");
+#else
+	printf("n\n");
+#endif
 	k_mem_domain_init(&user_domain, 1, user_partitions);
 	k_mem_domain_add_thread(&user_domain, user_thread);
 	k_thread_start(user_thread);

@@ -27,7 +27,7 @@ function swap_config () {
 }
 
 function make_image () {
-	rm -rf build
+	#rm -rf build
 	west build -b khadas_edge2
 	if [ $? -eq 1 ] ; then
 		exit 1
