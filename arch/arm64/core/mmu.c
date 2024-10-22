@@ -640,11 +640,10 @@ static uint64_t get_region_desc(uint32_t attrs)
 	unsigned int mem_type;
 	uint64_t desc = 0U;
 
+    (attrs & MT_NS) ? early_puts("get_region_desc -> PTE_BLOCK_DESC_NS\n") : early_puts("get_region_desc -> no PTE_BLOCK_DESC_NS\n") ;
 
 	/* NS bit for security memory access from secure state */
-#ifdef CONFIG_BENCHMARKING
-	desc |= PTE_BLOCK_DESC_NS;
-#else
+#if ! defined(CONFIG_BENCHMARKING)
 	desc |= (attrs & MT_NS) ? PTE_BLOCK_DESC_NS : 0;
 #endif
 
@@ -659,6 +658,8 @@ static uint64_t get_region_desc(uint32_t attrs)
 	 *     11      RO   RO
 	 */
 
+    (attrs & MT_RW) ? early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_RW\n") : early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_RO\n");
+
 
 	/* AP bits for Data access permission */
 #ifdef CONFIG_BENCHMARKING
@@ -667,10 +668,13 @@ static uint64_t get_region_desc(uint32_t attrs)
 	desc |= (attrs & MT_RW) ? PTE_BLOCK_DESC_AP_RW : PTE_BLOCK_DESC_AP_RO;
 #endif
 
+	(attrs & MT_RW_AP_ELx) ?
+		 early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_ELx\n") : early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_EL_HIGHER\n");
+
 	/* Mirror permissions to EL0 */
 #ifdef CONFIG_BENCHMARKING
 	// changing this to PTE_BLOCK_DESC_AP_ELx makes the program crash
-	desc |=  PTE_BLOCK_DESC_AP_EL_HIGHER;
+	desc |=  PTE_BLOCK_DESC_AP_ELx;
 #else
 	desc |= (attrs & MT_RW_AP_ELx) ?
 		 PTE_BLOCK_DESC_AP_ELx : PTE_BLOCK_DESC_AP_EL_HIGHER;
@@ -683,6 +687,13 @@ static uint64_t get_region_desc(uint32_t attrs)
 	mem_type = MT_TYPE(attrs);
 	desc |= PTE_BLOCK_DESC_MEMTYPE(mem_type);
 
+#ifdef CONFIG_BENCHMARKING
+        desc |= PTE_BLOCK_DESC_PXN;
+        desc |= PTE_BLOCK_DESC_UXN;
+        desc |= PTE_BLOCK_DESC_INNER_SHARE;
+        goto skip_switch;
+#endif
+
 	switch (mem_type) {
 	case MT_DEVICE_nGnRnE:
 	case MT_DEVICE_nGnRE:
@@ -693,34 +704,45 @@ static uint64_t get_region_desc(uint32_t attrs)
 		 * it is not strictly needed to set shareability field
 		 */
 		desc |= PTE_BLOCK_DESC_OUTER_SHARE;
-#ifdef CONFIG_BENCHMARKING
-#else
+#if ! CONFIG_BENCHMARKING
 		/* Map device memory as execute-never */
 		desc |= PTE_BLOCK_DESC_PXN;
-#endif
 		desc |= PTE_BLOCK_DESC_UXN;
+#endif
 		break;
 	case MT_NORMAL_NC:
 	case MT_NORMAL:
 		 /*Make Normal RW memory as execute never*/
-		if ((attrs & MT_RW) || (attrs & MT_P_EXECUTE_NEVER))
+		if ((attrs & MT_RW) || (attrs & MT_P_EXECUTE_NEVER)) {
+            early_puts("get_region_desc --> PTE_BLOCK_DESC_PXN\n");
 			desc |= PTE_BLOCK_DESC_PXN;
+        }
 
 		if (((attrs & MT_RW) && (attrs & MT_RW_AP_ELx)) ||
-		     (attrs & MT_U_EXECUTE_NEVER))
+		     (attrs & MT_U_EXECUTE_NEVER)) {
+            early_puts("get_region_desc --> PTE_BLOCK_DESC_UXN\n");
 			desc |= PTE_BLOCK_DESC_UXN;
+        }
 
-		if (mem_type == MT_NORMAL)
+		if (mem_type == MT_NORMAL) {
+            early_puts("get_region_desc --> PTE_BLOCK_DESC_INNER_SHARE\n");
 			desc |= PTE_BLOCK_DESC_INNER_SHARE;
-		else
+        } else {
+            early_puts("get_region_desc --> PTE_BLOCK_DESC_OUTER_SHARE\n");
 			desc |= PTE_BLOCK_DESC_OUTER_SHARE;
+        }
 	}
+skip_switch:
 
+#ifdef CONFIG_BENCHMARKING
+	desc |= PTE_BLOCK_DESC_NG;
+#else
 	/* non-Global bit */
 	if (attrs & MT_NG) {
-		early_puts("non global bit\n");
+		early_puts("get_region_desc --> PTE_BLOCK_DESC_NG\n");
 		desc |= PTE_BLOCK_DESC_NG;
 	}
+#endif
 
 	return desc;
 }
@@ -785,9 +807,21 @@ struct arm_mmu_flat_range {
 #ifdef CONFIG_BENCHMARKING
 /*#define MEM_TYPE MT_RW | MT_RW_AP_ELx | MT_SECURE | MT_P_EXECUTE | MT_U_EXECUTE | MT_NO_OVERWRITE | MT_NG*/
 /*#define MEM_TYPE MT_NORMAL*/
-#define MEM_TYPE MT_DEVICE_nGnRnE
+#define MEM_TYPE MT_NORMAL_NC
 #else
 #define MEM_TYPE MT_NORMAL
+/*
+get_region_desc -> no PTE_BLOCK_DESC_NS
+get_region_desc --> PTE_BLOCK_DESC_AP_RW
+get_region_desc --> PTE_BLOCK_DESC_AP_ELx
+get_region_desc --> PTE_BLOCK_DESC_PXN
+get_region_desc --> PTE_BLOCK_DESC_UXN
+get_region_desc --> PTE_BLOCK_DESC_INNER_SHARE
+get_region_desc --> PTE_BLOCK_DESC_NG
+get_region_desc -> PTE_BLOCK_DESC_NS
+get_region_desc --> PTE_BLOCK_DESC_AP_RW
+get_region_desc --> PTE_BLOCK_DESC_AP_EL_HIGHER
+ */
 #endif
 
 static const struct arm_mmu_flat_range mmu_zephyr_ranges[] = {
