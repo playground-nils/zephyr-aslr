@@ -640,12 +640,9 @@ static uint64_t get_region_desc(uint32_t attrs)
 	unsigned int mem_type;
 	uint64_t desc = 0U;
 
-    (attrs & MT_NS) ? early_puts("get_region_desc -> PTE_BLOCK_DESC_NS\n") : early_puts("get_region_desc -> no PTE_BLOCK_DESC_NS\n") ;
 
 	/* NS bit for security memory access from secure state */
-#if ! defined(CONFIG_BENCHMARKING)
 	desc |= (attrs & MT_NS) ? PTE_BLOCK_DESC_NS : 0;
-#endif
 
 	/*
 	 * AP bits for EL0 / ELh Data access permission
@@ -658,27 +655,13 @@ static uint64_t get_region_desc(uint32_t attrs)
 	 *     11      RO   RO
 	 */
 
-    (attrs & MT_RW) ? early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_RW\n") : early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_RO\n");
-
 
 	/* AP bits for Data access permission */
-#ifdef CONFIG_BENCHMARKING
-	desc |= PTE_BLOCK_DESC_AP_RW;
-#else
 	desc |= (attrs & MT_RW) ? PTE_BLOCK_DESC_AP_RW : PTE_BLOCK_DESC_AP_RO;
-#endif
-
-	(attrs & MT_RW_AP_ELx) ?
-		 early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_ELx\n") : early_puts("get_region_desc --> PTE_BLOCK_DESC_AP_EL_HIGHER\n");
 
 	/* Mirror permissions to EL0 */
-#ifdef CONFIG_BENCHMARKING
-	// changing this to PTE_BLOCK_DESC_AP_ELx makes the program crash
-	desc |=  PTE_BLOCK_DESC_AP_ELx;
-#else
 	desc |= (attrs & MT_RW_AP_ELx) ?
 		 PTE_BLOCK_DESC_AP_ELx : PTE_BLOCK_DESC_AP_EL_HIGHER;
-#endif
 
 	/* the access flag */
 	desc |= PTE_BLOCK_DESC_AF;
@@ -686,13 +669,6 @@ static uint64_t get_region_desc(uint32_t attrs)
 	/* memory attribute index field */
 	mem_type = MT_TYPE(attrs);
 	desc |= PTE_BLOCK_DESC_MEMTYPE(mem_type);
-
-#ifdef CONFIG_BENCHMARKING
-        desc |= PTE_BLOCK_DESC_PXN;
-        desc |= PTE_BLOCK_DESC_UXN;
-        desc |= PTE_BLOCK_DESC_INNER_SHARE;
-        goto skip_switch;
-#endif
 
 	switch (mem_type) {
 	case MT_DEVICE_nGnRnE:
@@ -704,45 +680,34 @@ static uint64_t get_region_desc(uint32_t attrs)
 		 * it is not strictly needed to set shareability field
 		 */
 		desc |= PTE_BLOCK_DESC_OUTER_SHARE;
-#if ! CONFIG_BENCHMARKING
 		/* Map device memory as execute-never */
 		desc |= PTE_BLOCK_DESC_PXN;
 		desc |= PTE_BLOCK_DESC_UXN;
-#endif
 		break;
 	case MT_NORMAL_NC:
 	case MT_NORMAL:
 		 /*Make Normal RW memory as execute never*/
 		if ((attrs & MT_RW) || (attrs & MT_P_EXECUTE_NEVER)) {
-            early_puts("get_region_desc --> PTE_BLOCK_DESC_PXN\n");
 			desc |= PTE_BLOCK_DESC_PXN;
         }
 
 		if (((attrs & MT_RW) && (attrs & MT_RW_AP_ELx)) ||
 		     (attrs & MT_U_EXECUTE_NEVER)) {
-            early_puts("get_region_desc --> PTE_BLOCK_DESC_UXN\n");
 			desc |= PTE_BLOCK_DESC_UXN;
         }
 
 		if (mem_type == MT_NORMAL) {
-            early_puts("get_region_desc --> PTE_BLOCK_DESC_INNER_SHARE\n");
 			desc |= PTE_BLOCK_DESC_INNER_SHARE;
         } else {
-            early_puts("get_region_desc --> PTE_BLOCK_DESC_OUTER_SHARE\n");
 			desc |= PTE_BLOCK_DESC_OUTER_SHARE;
         }
 	}
 skip_switch:
 
-#ifdef CONFIG_BENCHMARKING
-	desc |= PTE_BLOCK_DESC_NG;
-#else
 	/* non-Global bit */
 	if (attrs & MT_NG) {
-		early_puts("get_region_desc --> PTE_BLOCK_DESC_NG\n");
 		desc |= PTE_BLOCK_DESC_NG;
 	}
-#endif
 
 	return desc;
 }
@@ -804,12 +769,6 @@ struct arm_mmu_flat_range {
 	uint32_t attrs;
 };
 
-#ifdef CONFIG_BENCHMARKING
-/*#define MEM_TYPE MT_RW | MT_RW_AP_ELx | MT_SECURE | MT_P_EXECUTE | MT_U_EXECUTE | MT_NO_OVERWRITE | MT_NG*/
-/*#define MEM_TYPE MT_NORMAL*/
-#define MEM_TYPE MT_NORMAL_NC
-#else
-#define MEM_TYPE MT_NORMAL
 /*
 get_region_desc -> no PTE_BLOCK_DESC_NS
 get_region_desc --> PTE_BLOCK_DESC_AP_RW
@@ -822,6 +781,10 @@ get_region_desc -> PTE_BLOCK_DESC_NS
 get_region_desc --> PTE_BLOCK_DESC_AP_RW
 get_region_desc --> PTE_BLOCK_DESC_AP_EL_HIGHER
  */
+#ifdef CONFIG_BENCHMARKING
+#define MEM_TYPE MT_NORMAL_NC
+#else
+#define MEM_TYPE MT_NORMAL
 #endif
 
 static const struct arm_mmu_flat_range mmu_zephyr_ranges[] = {
@@ -927,8 +890,8 @@ static void setup_page_tables(struct arm_mmu_ptables *ptables)
 	/* setup translation table for zephyr execution regions */
 	for (index = 0U; index < ARRAY_SIZE(mmu_zephyr_ranges); index++) {
 		range = &mmu_zephyr_ranges[index];
-		char test[20];
-		sprintf(test, "%d\n", index);
+		char test[32];
+		sprintf(test, "region -> %d\n", index);
 		early_puts(test);
 		add_arm_mmu_flat_range(ptables, range, 0);
 	}
@@ -1009,12 +972,12 @@ static void enable_mmu_el1(struct arm_mmu_ptables *ptables, unsigned int flags)
 	early_puts("before reading the sctlr el1\n");
 	val = read_sctlr_el1();
 	early_puts("before setting the sctlr el1\n");
-/*#ifdef CONFIG_BENCHMARKING*/
-/*	__asm__ volatile ("msr sctlr_el1, %0"*/
-/*			  :: "r" (val | SCTLR_M_BIT) : "memory");*/
-/*#else*/
-	write_sctlr_el1(val | SCTLR_M_BIT | SCTLR_C_BIT);
-/*#endif*/
+	write_sctlr_el1(val
+			| SCTLR_M_BIT
+#if ! defined(CONFIG_SCTLR_BENCHMARKING)
+			| SCTLR_C_BIT
+#endif
+			);
 	early_puts("after setting the sctlr el1\n");
 
 	/* Ensure the MMU enable takes effect immediately */
@@ -1049,7 +1012,7 @@ void z_arm64_mm_init(bool is_primary_core)
 
 	/* Ensure that MMU is already not enabled */
 	__ASSERT((read_sctlr_el1() & SCTLR_M_BIT) == 0, "MMU is already enabled\n");
-	early_puts("A\n");
+	early_puts("z_arm64_mm_init --A\n");
 
 	/*
 	 * Only booting core setup up the page tables.
@@ -1058,7 +1021,7 @@ void z_arm64_mm_init(bool is_primary_core)
 		kernel_ptables.base_xlat_table = new_table();
 		setup_page_tables(&kernel_ptables);
 	}
-	early_puts("B\n");
+	early_puts("z_arm64_mm_init --B\n");
 
 	/* currently only EL1 is supported */
 	enable_mmu_el1(&kernel_ptables, flags);

@@ -43,6 +43,9 @@ void boot_banner(void)
 #endif /* CONFIG_BOOT_CLEAR_SCREEN */
 
 #ifdef CONFIG_BOOT_BANNER
-	printk("*** " CONFIG_BOOT_BANNER_STRING " " BANNER_VERSION BANNER_POSTFIX " ***\n");
+	// if this line is not commented the program will (crash?) not get to
+	// the project source
+	//printk("*** " CONFIG_BOOT_BANNER_STRING " " BANNER_VERSION BANNER_POSTFIX " ***\n");
+	early_puts("boot_banner --J\n");
 #endif /* CONFIG_BOOT_BANNER */
 }
