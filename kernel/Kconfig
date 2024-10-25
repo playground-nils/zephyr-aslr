@@ -202,12 +202,20 @@ config THREAD_STACK_MEM_MAPPED
 	  mapped with guard pages on both ends to catch undesired
 	  accesses.
 
+config SCTLR_BENCHMARKING
+	bool "Disabling the caches through the SCTLR"
+	depends on MMU
+	default 0
+	help
+	  This config is solely used for benchmarking purpose by disabling the
+	  caches through the SCTLR bits
+
 config BENCHMARKING
 	bool "Benchmarking performances"
 	depends on MMU
 	default 0
 	help
-	  This config is solely used for bechmarking purposes, it does
+	  This config is solely used for bechmarking purposes,
 	  not bring any sort of performances
 
 config SCTLR_BENCHMARKING

@@ -123,8 +123,7 @@ void z_arm64_el2_init(void)
 
 	reg = read_sctlr_el2();
 	reg |= (SCTLR_EL2_RES1 |	/* RES1 */
-#ifdef CONFIG_SCTLR_BENCHMARKING
-#else
+#if ! defined(CONFIG_SCTLR_BENCHMARKING)
 		SCTLR_I_BIT |		/* Enable i-cache */
 #endif
 		SCTLR_SA_BIT);		/* Enable SP alignment check */
@@ -184,9 +183,7 @@ void z_arm64_el1_init(void)
 
 	reg = read_sctlr_el1();
 	reg |= (SCTLR_EL1_RES1 |	/* RES1 */
-
-#ifdef CONFIG_SCTLR_BENCHMARKING
-#else
+#if ! defined(CONFIG_SCTLR_BENCHMARKING)
 		SCTLR_I_BIT |		/* Enable i-cache */
 		SCTLR_C_BIT |		/* Enable d-cache */
 #endif

@@ -684,17 +684,22 @@ static uint64_t get_region_desc(uint32_t attrs)
 		break;
 	case MT_NORMAL_NC:
 	case MT_NORMAL:
-		/* Make Normal RW memory as execute never */
-		if ((attrs & MT_RW) || (attrs & MT_P_EXECUTE_NEVER))
+
+		 /*Make Normal RW memory as execute never*/
+		if ((attrs & MT_RW) || (attrs & MT_P_EXECUTE_NEVER)) {
 			desc |= PTE_BLOCK_DESC_PXN;
 
 		if (((attrs & MT_RW) && (attrs & MT_RW_AP_ELx)) ||
-		     (attrs & MT_U_EXECUTE_NEVER))
+		     (attrs & MT_U_EXECUTE_NEVER)) {
 			desc |= PTE_BLOCK_DESC_UXN;
 
 		if (mem_type == MT_NORMAL)
 			desc |= PTE_BLOCK_DESC_INNER_SHARE;
 		else
+
+		if (mem_type == MT_NORMAL) {
+			desc |= PTE_BLOCK_DESC_INNER_SHARE;
+        } else {
 			desc |= PTE_BLOCK_DESC_OUTER_SHARE;
 	}
 
@@ -763,6 +768,18 @@ struct arm_mmu_flat_range {
 	uint32_t attrs;
 };
 
+/*
+get_region_desc -> no PTE_BLOCK_DESC_NS
+get_region_desc --> PTE_BLOCK_DESC_AP_RW
+get_region_desc --> PTE_BLOCK_DESC_AP_ELx
+get_region_desc --> PTE_BLOCK_DESC_PXN
+get_region_desc --> PTE_BLOCK_DESC_UXN
+get_region_desc --> PTE_BLOCK_DESC_INNER_SHARE
+get_region_desc --> PTE_BLOCK_DESC_NG
+get_region_desc -> PTE_BLOCK_DESC_NS
+get_region_desc --> PTE_BLOCK_DESC_AP_RW
+get_region_desc --> PTE_BLOCK_DESC_AP_EL_HIGHER
+ */
 #ifdef CONFIG_BENCHMARKING
 #define MEM_TYPE MT_NORMAL_NC
 #else
@@ -871,6 +888,9 @@ static void setup_page_tables(struct arm_mmu_ptables *ptables)
 	/* setup translation table for zephyr execution regions */
 	for (index = 0U; index < ARRAY_SIZE(mmu_zephyr_ranges); index++) {
 		range = &mmu_zephyr_ranges[index];
+		char test[32];
+		sprintf(test, "region -> %d\n", index);
+		early_puts(test);
 		add_arm_mmu_flat_range(ptables, range, 0);
 	}
 
@@ -948,14 +968,14 @@ static void enable_mmu_el1(struct arm_mmu_ptables *ptables, unsigned int flags)
 
 	/* Enable the MMU and data cache */
 	val = read_sctlr_el1();
-
+	early_puts("before setting the sctlr el1\n");
 	write_sctlr_el1(val
-#ifdef CONFIG_SCTLR_BENCHMARKING
-
-#else
-        | SCTLR_C_BIT
+			| SCTLR_M_BIT
+#if ! defined(CONFIG_SCTLR_BENCHMARKING)
+			| SCTLR_C_BIT
 #endif
-        | SCTLR_M_BIT);
+			);
+	early_puts("after setting the sctlr el1\n");
 
 	/* Ensure the MMU enable takes effect immediately */
 	barrier_isync_fence_full();
